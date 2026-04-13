@@ -43,6 +43,15 @@ def get_target_token_count(args, tokenizer, reference_summary: str) -> int:
     return args.max_new_tokens
 
 
+def truncate_at_eos(token_ids, tokenizer):
+    eos_token_id = tokenizer.eos_token_id
+    if eos_token_id is None:
+        return token_ids
+    if eos_token_id in token_ids:
+        return token_ids[: token_ids.index(eos_token_id)]
+    return token_ids
+
+
 def generate_summary(model, tokenizer, args, dialogue: str, reference_summary: str) -> str:
     prompt = build_prompt(dialogue)
     prompt_ids = tokenizer.encode(
@@ -62,6 +71,7 @@ def generate_summary(model, tokenizer, args, dialogue: str, reference_summary: s
     decode_args.diffusion_steps = target_token_count
     result = generate_samples(model, decode_args, tokenizer, inputs, verbose=args.verbose)
     pred_ids = result.tolist()[0][-target_token_count:]
+    pred_ids = truncate_at_eos(pred_ids, tokenizer)
     return tokenizer.decode(pred_ids, skip_special_tokens=True).strip()
 
 
